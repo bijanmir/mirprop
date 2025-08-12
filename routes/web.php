@@ -1,4 +1,8 @@
 <?php
+use App\Models\Property;
+use App\Models\Lease;
+use App\Models\Payment;
+use App\Models\MaintenanceTicket;
 
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ContactController;
@@ -89,6 +93,50 @@ Route::middleware(['auth', 'verified', 'ensure.organization'])->group(function (
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/demo/properties', function () {
+        $properties = Property::withCount(['units'])
+            ->with(['units' => fn($q) => $q->select('id','property_id','status')])
+            ->latest()->paginate(10);
+
+        $occupiedCounts = $properties->mapWithKeys(function ($p) {
+            $occupied = $p->units->where('status','occupied')->count();
+            return [$p->id => $occupied];
+        });
+
+        return view('demo.properties.index', compact('properties','occupiedCounts'));
+    })->name('demo.properties');
+
+    Route::get('/demo/leases', function () {
+        $leases = Lease::with(['unit.property','primaryContact'])->latest()->paginate(10);
+        return view('demo.leases.index', compact('leases'));
+    })->name('demo.leases');
+
+    Route::get('/demo/payments', function () {
+        $payments = Payment::with(['lease.unit.property','contact'])->latest('posted_at')->paginate(10);
+        return view('demo.payments.index', compact('payments'));
+    })->name('demo.payments');
+
+    Route::get('/demo/tickets', function () {
+        $tickets = MaintenanceTicket::with(['unit.property'])->latest()->paginate(10);
+        return view('demo.tickets.index', compact('tickets'));
+    })->name('demo.tickets');
+});
+
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/orgs/create', [OrganizationController::class, 'create'])->name('orgs.create');
+    Route::post('/orgs', [OrganizationController::class, 'store'])->name('orgs.store');
+});
+
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // HTMX partials
+    Route::get('/dashboard/partials/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
+    Route::get('/dashboard/partials/occupancy', [DashboardController::class, 'occupancy'])->name('dashboard.occupancy');
+    Route::get('/dashboard/partials/recent', [DashboardController::class, 'recent'])->name('dashboard.recent');
 });
 
 // Include Breeze authentication routes

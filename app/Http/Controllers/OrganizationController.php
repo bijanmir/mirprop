@@ -16,9 +16,9 @@ class OrganizationController extends Controller
         return view('organizations.index', compact('organizations'));
     }
 
-    public function create()
+  public function create()
     {
-        return view('organizations.create');
+        return view('orgs.create');
     }
 
     public function store(StoreOrganizationRequest $request)
