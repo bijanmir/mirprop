@@ -11,125 +11,130 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class PropertyController extends Controller
 {
     use AuthorizesRequests;
-    /**
-     * Display a listing of the resource.
-     */
+
+    public function __construct()
+    {
+        $this->authorizeResource(Property::class, 'property');
+    }
+
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Property::class);
-        
-        $properties = Property::withCount(['units', 'units as occupied_units_count' => function ($query) {
-                $query->where('status', 'occupied');
+        $query = Property::with(['units' => function ($query) {
+                $query->select('id', 'property_id', 'status', 'rent_amount_cents');
             }])
-            ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('address_line1', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%");
-            })
-            ->when($request->type, function ($query, $type) {
-                $query->where('type', $type);
-            })
-            ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc'))
-            ->paginate(15);
+            ->withCount(['units', 'units as occupied_units_count' => function ($query) {
+                $query->where('status', 'occupied');
+            }]);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('address_line1', 'ilike', "%{$search}%")
+                  ->orWhere('city', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Sorting
+        $sortField = $request->get('sort', 'name');
+        $sortDirection = $request->get('direction', 'asc');
         
+        $allowedSorts = ['name', 'type', 'city', 'created_at'];
+        if (in_array($sortField, $allowedSorts)) {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $properties = $query->paginate(15)->withQueryString();
+
+        // Add calculated fields
+        $properties->getCollection()->transform(function ($property) {
+            $property->monthly_revenue = $property->units->sum('rent_amount_cents');
+            return $property;
+        });
+
+        // Return HTMX partial or full page
         if ($request->header('HX-Request')) {
             return view('properties.partials.table', compact('properties'));
         }
-        
+
         return view('properties.index', compact('properties'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        $this->authorize('create', Property::class);
-        
-        if (request()->header('HX-Request')) {
-            return view('properties.partials.create-form');
-        }
-        
         return view('properties.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StorePropertyRequest $request)
     {
         $property = Property::create($request->validated());
-        
+
         if ($request->header('HX-Request')) {
             return response()
-                ->view('properties.partials.row', compact('property'))
+                ->view('properties.partials.created', compact('property'))
                 ->header('HX-Trigger', json_encode([
-                    'close-modal' => true,
-                    'refresh-table' => true,
                     'toast' => [
                         'message' => 'Property created successfully',
                         'type' => 'success'
-                    ]
+                    ],
+                    'propertiesRefresh' => true
                 ]));
         }
-        
+
         return redirect()
             ->route('properties.show', $property)
             ->with('success', 'Property created successfully');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Property $property)
     {
-        $this->authorize('view', $property);
-        
-        $property->load(['units' => function ($query) {
-            $query->with('activeLease.primaryContact')
-                ->orderBy('label');
-        }]);
-        
+        $property->load([
+            'units' => function ($query) {
+                $query->with(['activeLease.primaryContact', 'maintenanceTickets' => function ($q) {
+                    $q->whereIn('status', ['open', 'in_progress'])->limit(3);
+                }]);
+            }
+        ]);
+
+        // Calculate metrics
         $metrics = [
             'total_units' => $property->units->count(),
             'occupied_units' => $property->units->where('status', 'occupied')->count(),
-            'vacant_units' => $property->units->where('status', 'vacant')->count(),
-            'monthly_rent' => $property->units->sum('rent_amount_cents'),
+            'available_units' => $property->units->where('status', 'available')->count(),
+            'maintenance_units' => $property->units->where('status', 'maintenance')->count(),
+            'monthly_revenue' => $property->units->sum('rent_amount_cents'),
+            'occupancy_rate' => $property->units->count() > 0 
+                ? round(($property->units->where('status', 'occupied')->count() / $property->units->count()) * 100, 1)
+                : 0,
         ];
-        
-        $metrics['occupancy_rate'] = $metrics['total_units'] > 0 
-            ? round(($metrics['occupied_units'] / $metrics['total_units']) * 100, 1)
-            : 0;
-        
-        return view('properties.show', compact('property', 'metrics'));
+
+        $recentActivity = collect(); // TODO: Implement activity log
+
+        return view('properties.show', compact('property', 'metrics', 'recentActivity'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Property $property)
     {
-        $this->authorize('update', $property);
-        
         if (request()->header('HX-Request')) {
             return view('properties.partials.edit-form', compact('property'));
         }
-        
+
         return view('properties.edit', compact('property'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UpdatePropertyRequest $request, Property $property)
     {
-        $this->authorize('update', $property);
-        
         $property->update($request->validated());
-        
+
         if ($request->header('HX-Request')) {
             return response()
-                ->view('properties.partials.row', compact('property'))
+                ->view('properties.partials.updated', compact('property'))
                 ->header('HX-Trigger', json_encode([
                     'toast' => [
                         'message' => 'Property updated successfully',
@@ -137,39 +142,29 @@ class PropertyController extends Controller
                     ]
                 ]));
         }
-        
+
         return redirect()
             ->route('properties.show', $property)
             ->with('success', 'Property updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Property $property)
     {
-        $this->authorize('delete', $property);
-        
         // Check if property has units
-        if ($property->units()->exists()) {
+        if ($property->units()->count() > 0) {
             if (request()->header('HX-Request')) {
                 return response()
-                    ->make('Cannot delete property with existing units', 422)
-                    ->header('HX-Trigger', json_encode([
-                        'toast' => [
-                            'message' => 'Cannot delete property with existing units',
-                            'type' => 'error'
-                        ]
-                    ]));
+                    ->json(['error' => 'Cannot delete property with existing units'])
+                    ->setStatusCode(422);
             }
-            
+
             return redirect()
                 ->route('properties.index')
-                ->with('error', 'Cannot delete property with existing units');
+                ->with('error', 'Cannot delete property with existing units. Please remove all units first.');
         }
-        
+
         $property->delete();
-        
+
         if (request()->header('HX-Request')) {
             return response('')
                 ->header('HX-Trigger', json_encode([
@@ -179,7 +174,7 @@ class PropertyController extends Controller
                     ]
                 ]));
         }
-        
+
         return redirect()
             ->route('properties.index')
             ->with('success', 'Property deleted successfully');

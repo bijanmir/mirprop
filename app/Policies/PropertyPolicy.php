@@ -9,7 +9,7 @@ class PropertyPolicy extends BasePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->current_organization_id !== null;
+        return true; // Users can view properties in their organization
     }
 
     public function view(User $user, Property $property): bool
@@ -31,17 +31,12 @@ class PropertyPolicy extends BasePolicy
     public function delete(User $user, Property $property): bool
     {
         return $this->belongsToUserOrganization($user, $property) 
-            && $this->isOwner($user);
+            && $this->isOwnerOrManager($user);
     }
 
-    public function restore(User $user, Property $property): bool
+    public function manageUnits(User $user, Property $property): bool
     {
         return $this->belongsToUserOrganization($user, $property) 
-            && $this->isOwner($user);
-    }
-
-    public function forceDelete(User $user, Property $property): bool
-    {
-        return false;
+            && $this->isStaff($user);
     }
 }

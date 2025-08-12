@@ -8,6 +8,8 @@ class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
         Organization::class => OrganizationPolicy::class,
+        Property::class => PropertyPolicy::class,
+        Unit::class => UnitPolicy::class,
     ];
 
     /**

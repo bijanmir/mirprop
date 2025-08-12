@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Property;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,19 +10,19 @@ class UpdatePropertyRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Authorization handled in controller
+        return $this->user()->can('update', $this->route('property'));
     }
 
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in(['residential', 'commercial', 'mixed'])],
-            'address_line1' => ['required', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', Rule::in(['residential', 'commercial', 'mixed'])],
+            'address_line1' => ['sometimes', 'string', 'max:255'],
             'address_line2' => ['nullable', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'state' => ['required', 'string', 'size:2'],
-            'zip' => ['required', 'string', 'max:10'],
+            'city' => ['sometimes', 'string', 'max:255'],
+            'state' => ['sometimes', 'string', 'size:2'],
+            'zip' => ['sometimes', 'string', 'max:10'],
             'country' => ['nullable', 'string', 'size:2'],
         ];
     }
@@ -36,9 +37,12 @@ class UpdatePropertyRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'state' => strtoupper($this->state ?? ''),
-            'country' => strtoupper($this->country ?? 'US'),
-        ]);
+        if ($this->filled('state')) {
+            $this->merge(['state' => strtoupper($this->state)]);
+        }
+        
+        if ($this->filled('country')) {
+            $this->merge(['country' => strtoupper($this->country)]);
+        }
     }
 }
