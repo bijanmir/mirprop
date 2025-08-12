@@ -6,9 +6,11 @@ use App\Http\Requests\StoreContactRequest;
 use App\Http\Requests\UpdateContactRequest;
 use App\Models\Contact;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ContactController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct()
     {
         $this->authorizeResource(Contact::class, 'contact');

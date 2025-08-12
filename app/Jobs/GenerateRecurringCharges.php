@@ -59,7 +59,11 @@ class GenerateRecurringCharges implements ShouldQueue
             foreach ($recurringCharges as $recurringCharge) {
                 $nextDueDate = $this->calculateNextDueDate($recurringCharge, $lease);
 
-                if (!$nextDueDate || $nextDueDate->gt($lease->end_date)) {
+                $leaseEndDate = $lease->end_date instanceof Carbon
+                    ? $lease->end_date
+                    : Carbon::parse((string) $lease->end_date);
+
+                if (!$nextDueDate || $nextDueDate->gt($leaseEndDate)) {
                     continue;
                 }
 
@@ -123,12 +127,18 @@ class GenerateRecurringCharges implements ShouldQueue
 
             case 'weekly':
                 // For weekly, use the day of week from the lease start date
-                $dayOfWeek = $lease->start_date->dayOfWeek;
+                $startDate = $lease->start_date instanceof Carbon
+                    ? $lease->start_date
+                    : Carbon::parse((string) $lease->start_date);
+                $dayOfWeek = $startDate->dayOfWeek;
                 $nextDueDate = $today->copy()->next($dayOfWeek);
                 break;
 
             case 'yearly':
-                $nextDueDate = $lease->start_date->copy()->year($today->year);
+                $startDate = $lease->start_date instanceof Carbon
+                    ? $lease->start_date
+                    : Carbon::parse((string) $lease->start_date);
+                $nextDueDate = $startDate->copy()->year($today->year);
                 if ($nextDueDate->lte($today)) {
                     $nextDueDate->addYear();
                 }
@@ -139,7 +149,14 @@ class GenerateRecurringCharges implements ShouldQueue
         }
 
         // Don't generate charges before lease start or after lease end
-        if ($nextDueDate->lt($lease->start_date) || $nextDueDate->gt($lease->end_date)) {
+        $leaseStartDate = $lease->start_date instanceof Carbon
+            ? $lease->start_date
+            : Carbon::parse((string) $lease->start_date);
+        $leaseEndDate = $lease->end_date instanceof Carbon
+            ? $lease->end_date
+            : Carbon::parse((string) $lease->end_date);
+
+        if ($nextDueDate->lt($leaseStartDate) || $nextDueDate->gt($leaseEndDate)) {
             return null;
         }
 

@@ -8,9 +8,11 @@ use App\Models\Contact;
 use App\Models\Lease;
 use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class LeaseController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct()
     {
         $this->authorizeResource(Lease::class, 'lease');
@@ -63,7 +65,7 @@ class LeaseController extends Controller
             'type' => 'rent',
             'amount_cents' => $lease->rent_amount_cents,
             'description' => 'Monthly Rent',
-            'due_date' => $lease->start_date->day($request->input('rent_due_day', 1)),
+            'due_date' => \Carbon\Carbon::parse((string) $lease->start_date)->copy()->setDay($request->input('rent_due_day', 1)),
             'balance_cents' => $lease->rent_amount_cents,
             'is_recurring' => true,
             'day_of_month' => $request->input('rent_due_day', 1),

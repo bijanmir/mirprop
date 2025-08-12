@@ -8,9 +8,11 @@ use App\Models\Payment;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ReportController extends Controller
 {
+    use AuthorizesRequests;
     public function rentRoll(Request $request)
     {
         $this->authorize('viewAny', Lease::class);

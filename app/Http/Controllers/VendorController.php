@@ -7,9 +7,10 @@ use App\Http\Requests\UpdateVendorRequest;
 use App\Models\Contact;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
-
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class VendorController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct()
     {
         $this->authorizeResource(Vendor::class, 'vendor');

@@ -6,9 +6,11 @@ use App\Http\Requests\StoreAnnouncementRequest;
 use App\Http\Requests\UpdateAnnouncementRequest;
 use App\Models\Announcement;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class AnnouncementController extends Controller
 {
+    use AuthorizesRequests;
     public function index(Request $request)
     {
         $this->authorize('viewAny', Announcement::class);

@@ -6,9 +6,11 @@ use App\Http\Requests\StoreOrganizationRequest;
 use App\Http\Requests\UpdateOrganizationRequest;
 use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class OrganizationController extends Controller
 {
+    use AuthorizesRequests;
     public function index()
     {
         $organizations = auth()->user()->organizations()->get();

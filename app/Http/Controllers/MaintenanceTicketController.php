@@ -9,9 +9,11 @@ use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class MaintenanceTicketController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct()
     {
         $this->authorizeResource(MaintenanceTicket::class, 'maintenance_ticket');

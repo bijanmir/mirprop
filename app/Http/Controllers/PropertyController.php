@@ -6,9 +6,11 @@ use App\Http\Requests\StorePropertyRequest;
 use App\Http\Requests\UpdatePropertyRequest;
 use App\Models\Property;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PropertyController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */

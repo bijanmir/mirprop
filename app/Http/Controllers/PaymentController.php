@@ -7,9 +7,11 @@ use App\Models\Lease;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Stripe\StripeClient;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PaymentController extends Controller
 {
+    use AuthorizesRequests;
     protected $stripe;
     
     public function __construct()

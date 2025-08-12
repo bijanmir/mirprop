@@ -35,7 +35,7 @@ public function handle(): void
 
     try {
         Mail::to($this->payment->contact->email)
-            ->queue(new ACHProcessingMail($this->payment));
+            ->queue(new ACHProcessingMail());
 
         Log::info('ACH processing notification queued', [
             'payment_id' => $this->payment->id,

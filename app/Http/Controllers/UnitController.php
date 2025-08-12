@@ -7,9 +7,11 @@ use App\Http\Requests\UpdateUnitRequest;
 use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class UnitController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct()
     {
         $this->authorizeResource(Unit::class, 'unit');
