@@ -1,5 +1,6 @@
 <?php
 
+// database/seeders/DatabaseSeeder.php
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -9,8 +10,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            OrganizationDemoSeeder::class,
-            DemoDataSeeder::class,
+            PropertySeeder::class,
+            PaymentSeeder::class,
+            MaintenanceSeeder::class,
         ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Payment;
 use App\Models\Unit;
+use App\Models\Property;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -15,7 +16,46 @@ class DashboardController extends Controller
         $organization = auth()->user()->currentOrganization;
 
         if (!$organization) {
-            return redirect()->route('organizations.create');
+            return redirect()->route('orgs.create');
+        }
+
+        $orgId = $organization->id;
+
+        $stats = [
+            'properties' => Property::where('organization_id', $orgId)->count(),
+            'units' => Unit::where('organization_id', $orgId)->count(),
+            'occupied_units' => Unit::where('organization_id', $orgId)->where('status', 'occupied')->count(),
+            'monthly_revenue' => Lease::where('organization_id', $orgId)
+                ->where('status', 'active')
+                ->sum('rent_amount_cents'),
+        ];
+
+        $stats['occupancy_rate'] = $stats['units'] > 0
+            ? round(($stats['occupied_units'] / $stats['units']) * 100, 1)
+            : 0;
+
+        $recentPayments = Payment::where('organization_id', $orgId)
+            ->with(['contact', 'lease.unit.property'])
+            ->whereNotNull('posted_at')
+            ->latest('posted_at')
+            ->limit(5)
+            ->get();
+
+        $openTickets = MaintenanceTicket::where('organization_id', $orgId)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->with(['property', 'unit'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return view('dashboard', compact('stats', 'recentPayments', 'openTickets'));
+    }
+
+    public function metrics()
+    {
+        $organization = auth()->user()->currentOrganization;
+        if (!$organization) {
+            return response()->json(['error' => 'No organization'], 400);
         }
 
         $orgId = $organization->id;
@@ -41,7 +81,7 @@ class DashboardController extends Controller
         $monthlyCharges = \App\Models\LeaseCharge::whereHas('lease', fn($q) => $q->where('organization_id', $orgId))
             ->where('type', 'rent')
             ->whereBetween('due_date', [$startOfMonth, $endOfMonth])
-            ->sum('amount_cents');
+            ->sum('amount_cents') ?? 0;
 
         $monthlyPayments = Payment::where('organization_id', $orgId)
             ->where('status', 'succeeded')
@@ -50,35 +90,51 @@ class DashboardController extends Controller
 
         $metrics['rent_due'] = $monthlyCharges;
         $metrics['rent_collected'] = $monthlyPayments;
-        $metrics['collection_rate'] = $monthlyCharges > 0 ? round(($monthlyPayments / $monthlyCharges) * 100, 1) : 0;
+        $metrics['collection_rate'] = $monthlyCharges > 0 ? 
+            round(($monthlyPayments / $monthlyCharges) * 100, 1) : 0;
 
-        $recentLeases = Lease::with(['unit.property', 'primaryContact'])
-            ->where('organization_id', $orgId)
-            ->latest()->limit(5)->get();
+        return response()->json($metrics);
+    }
 
-        $recentPayments = Payment::with(['lease.unit.property', 'contact'])
-            ->where('organization_id', $orgId)
-            ->where('status', 'succeeded')
-            ->orderByDesc('posted_at')
-            ->orderByDesc('created_at')
-            ->limit(5)->get();
+    public function occupancy()
+    {
+        $organization = auth()->user()->currentOrganization;
+        if (!$organization) {
+            return response()->json(['error' => 'No organization'], 400);
+        }
 
-        $recentTickets = MaintenanceTicket::with(['property', 'unit'])
-            ->where('organization_id', $orgId)
-            ->latest()->limit(5)->get();
+        $properties = Property::where('organization_id', $organization->id)
+            ->withCount(['units', 'units as occupied_units_count' => function ($query) {
+                $query->where('status', 'occupied');
+            }])
+            ->get();
 
-        $upcomingExpirations = Lease::with(['unit.property', 'primaryContact'])
-            ->where('organization_id', $orgId)
-            ->where('status', 'active')
-            ->whereBetween('end_date', [now(), now()->addDays(60)])
-            ->orderBy('end_date')->limit(10)->get();
+        return view('dashboard.partials.occupancy', compact('properties'));
+    }
 
-        return view('dashboard.index', compact(
-            'metrics',
-            'recentLeases',
-            'recentPayments',
-            'recentTickets',
-            'upcomingExpirations'
-        ));
+    public function recent()
+    {
+        $organization = auth()->user()->currentOrganization;
+        if (!$organization) {
+            return response()->json(['error' => 'No organization'], 400);
+        }
+
+        $orgId = $organization->id;
+
+        $recentPayments = Payment::where('organization_id', $orgId)
+            ->with(['contact', 'lease.unit.property'])
+            ->whereNotNull('posted_at')
+            ->latest('posted_at')
+            ->limit(5)
+            ->get();
+
+        $openTickets = MaintenanceTicket::where('organization_id', $orgId)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->with(['property', 'unit'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return view('dashboard.partials.recent', compact('recentPayments', 'openTickets'));
     }
 }

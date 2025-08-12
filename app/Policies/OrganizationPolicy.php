@@ -9,42 +9,40 @@ class OrganizationPolicy extends BasePolicy
 {
     public function viewAny(User $user): bool
     {
-        return true; // Users can see organizations they belong to
+        return true; // Users can view their organizations
     }
 
     public function view(User $user, Organization $organization): bool
     {
-        return $user->organizations->contains($organization);
+        return $this->belongsToUserOrganization($user, $organization);
     }
 
     public function create(User $user): bool
     {
-        return true; // Any authenticated user can create an organization
+        return true; // Any authenticated user can create organizations
     }
 
     public function update(User $user, Organization $organization): bool
     {
-        return $user->organizations()
-            ->where('organization_id', $organization->id)
-            ->where('role', 'owner')
-            ->exists();
+        return $this->belongsToUserOrganization($user, $organization) 
+            && $this->isOwnerOrManager($user);
     }
 
     public function delete(User $user, Organization $organization): bool
     {
-        return $user->organizations()
-            ->where('organization_id', $organization->id)
-            ->where('role', 'owner')
-            ->exists();
+        return $this->belongsToUserOrganization($user, $organization) 
+            && $this->isOwner($user);
     }
 
-    public function restore(User $user, Organization $organization): bool
+    public function manageUsers(User $user, Organization $organization): bool
     {
-        return false;
+        return $this->belongsToUserOrganization($user, $organization) 
+            && $this->isOwnerOrManager($user);
     }
 
-    public function forceDelete(User $user, Organization $organization): bool
+    public function manageBilling(User $user, Organization $organization): bool
     {
-        return false;
+        return $this->belongsToUserOrganization($user, $organization) 
+            && $this->isOwner($user);
     }
 }

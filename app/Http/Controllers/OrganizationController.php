@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class OrganizationController extends Controller
 {
     use AuthorizesRequests;
+
     public function index()
     {
         $organizations = auth()->user()->organizations()->get();
@@ -18,14 +19,21 @@ class OrganizationController extends Controller
         return view('organizations.index', compact('organizations'));
     }
 
-  public function create()
+    public function create()
     {
         return view('orgs.create');
     }
 
     public function store(StoreOrganizationRequest $request)
     {
-        $organization = Organization::create($request->validated());
+        $validated = $request->validated();
+        
+        // Create organization with settings
+        $organization = Organization::create([
+            'name' => $validated['name'],
+            'slug' => $validated['slug'],
+            'settings' => $validated['settings'] ?? ['currency' => 'USD'],
+        ]);
         
         // Attach user as owner
         $organization->users()->attach(auth()->id(), ['role' => 'owner']);
@@ -35,7 +43,14 @@ class OrganizationController extends Controller
         
         return redirect()
             ->route('dashboard')
-            ->with('success', 'Organization created successfully');
+            ->with('success', 'Organization created successfully! Welcome to ' . $organization->name . '.');
+    }
+
+    public function show(Organization $organization)
+    {
+        $this->authorize('view', $organization);
+        
+        return view('organizations.show', compact('organization'));
     }
 
     public function edit(Organization $organization)
@@ -53,7 +68,9 @@ class OrganizationController extends Controller
     {
         $this->authorize('update', $organization);
         
-        $organization->update($request->validated());
+        $validated = $request->validated();
+        
+        $organization->update($validated);
         
         if ($request->header('HX-Request')) {
             return response()
@@ -75,7 +92,7 @@ class OrganizationController extends Controller
     {
         // Verify user belongs to organization
         if (!auth()->user()->organizations->contains($organization)) {
-            abort(403);
+            abort(403, 'You do not have access to this organization.');
         }
         
         auth()->user()->update(['current_organization_id' => $organization->id]);
