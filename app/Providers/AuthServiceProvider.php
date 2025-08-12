@@ -10,6 +10,8 @@ class AuthServiceProvider extends ServiceProvider
         Organization::class => OrganizationPolicy::class,
         Property::class => PropertyPolicy::class,
         Unit::class => UnitPolicy::class,
+        Contact::class => ContactPolicy::class,
+        Vendor::class => VendorPolicy::class,
     ];
 
     /**

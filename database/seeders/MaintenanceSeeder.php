@@ -33,13 +33,22 @@ class MaintenanceSeeder extends Seeder
 
         $vendors = [];
         for ($i = 1; $i <= 5; $i++) {
-            $vendors[] = Contact::create([
+            $contact = Contact::create([
                 'organization_id' => $org->id,
                 'type' => 'vendor',
                 'name' => fake()->company() . ' Services',
                 'email' => fake()->companyEmail(),
                 'phone' => fake()->phoneNumber(),
             ]);
+            
+            $vendor = Vendor::create([
+                'organization_id' => $org->id,
+                'contact_id' => $contact->id,
+                'services' => [fake()->randomElement(['Plumbing', 'Electrical', 'HVAC', 'Painting', 'Cleaning'])],
+                'is_active' => true,
+            ]);
+            
+            $vendors[] = $vendor;
         }
 
         foreach ($properties as $property) {
@@ -57,11 +66,9 @@ class MaintenanceSeeder extends Seeder
                     'title' => $template['title'],
                     'description' => $template['description'],
                     'priority' => $template['priority'],
-                    'status' => fake()->randomElement(['open', 'in_progress', 'completed', 'cancelled']),
-                    'assigned_to_id' => $assignedVendor?->id,
-                    'estimated_cost_cents' => fake()->numberBetween(5000, 50000),
-                    'actual_cost_cents' => fake()->boolean(40) ? fake()->numberBetween(3000, 60000) : null,
-                    'scheduled_at' => fake()->boolean(70) ? fake()->dateTimeBetween('now', '+2 weeks') : null,
+                    'status' => fake()->randomElement(['open', 'assigned', 'in_progress', 'completed', 'closed']),
+                    'assigned_vendor_id' => $assignedVendor?->id,
+                    'sla_due_at' => fake()->dateTimeBetween('now', '+1 week'),
                     'completed_at' => fake()->boolean(30) ? fake()->dateTimeBetween('-1 month', 'now') : null,
                 ]);
             }

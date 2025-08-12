@@ -43,19 +43,19 @@ class User extends Authenticatable
         return $this->belongsTo(Organization::class, 'current_organization_id');
     }
 
-    public function hasOrganizationRole($roles)
-    {
-        if (!$this->current_organization_id) {
-            return false;
-        }
-
-        $roles = is_array($roles) ? $roles : [$roles];
-        
-        return $this->organizations()
-            ->where('organization_id', $this->current_organization_id)
-            ->whereIn('role', $roles)
-            ->exists();
+    public function hasOrganizationRole($roles): bool
+{
+    if (!$this->current_organization_id) {
+        return false;
     }
+    
+    $roles = is_array($roles) ? $roles : [$roles];
+    
+    return $this->organizations()
+        ->where('organization_id', $this->current_organization_id)
+        ->whereIn('organization_user.role', $roles)
+        ->exists();
+}
 
     public function isOwnerOrManager()
     {

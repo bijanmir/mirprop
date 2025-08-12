@@ -54,9 +54,6 @@ class PaymentSeeder extends Seeder
                     'method' => $method,
                     'status' => $status,
                     'posted_at' => $status === 'succeeded' ? $paymentDate : null,
-                    'due_date' => $paymentDate->copy()->startOfMonth()->addDay(),
-                    'late_fee_cents' => $paymentDate->gt($paymentDate->copy()->startOfMonth()->addDays(5)) ? fake()->numberBetween(2500, 7500) : 0,
-                    'notes' => fake()->boolean(20) ? fake()->sentence() : null,
                     'created_at' => $paymentDate,
                     'updated_at' => $paymentDate,
                 ]);
@@ -72,8 +69,6 @@ class PaymentSeeder extends Seeder
                     'method' => 'ach',
                     'status' => 'succeeded',
                     'posted_at' => $lease->start_date,
-                    'payment_type' => 'deposit',
-                    'notes' => 'Security deposit payment',
                     'created_at' => $lease->start_date,
                     'updated_at' => $lease->start_date,
                 ]);

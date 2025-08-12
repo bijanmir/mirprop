@@ -9,7 +9,7 @@ class ContactPolicy extends BasePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->current_organization_id !== null;
+        return true; // Users can view contacts in their organization
     }
 
     public function view(User $user, Contact $contact): bool
@@ -31,18 +31,19 @@ class ContactPolicy extends BasePolicy
     public function delete(User $user, Contact $contact): bool
     {
         return $this->belongsToUserOrganization($user, $contact) 
-            && $this->isOwnerOrManager($user)
-            && !$contact->leases()->exists(); // Can't delete contact with leases
-    }
-
-    public function restore(User $user, Contact $contact): bool
-    {
-        return $this->belongsToUserOrganization($user, $contact) 
             && $this->isOwnerOrManager($user);
     }
 
-    public function forceDelete(User $user, Contact $contact): bool
+    public function createLease(User $user, Contact $contact): bool
     {
-        return false;
+        return $this->belongsToUserOrganization($user, $contact) 
+            && $this->isStaff($user)
+            && $contact->type === 'tenant';
+    }
+
+    public function viewPayments(User $user, Contact $contact): bool
+    {
+        return $this->belongsToUserOrganization($user, $contact) 
+            && $this->isStaff($user);
     }
 }
