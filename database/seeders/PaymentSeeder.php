@@ -28,18 +28,9 @@ class PaymentSeeder extends Seeder
             for ($i = 0; $i < $paymentsToCreate; $i++) {
                 $paymentDate = Carbon::now()->subMonths($paymentsToCreate - $i - 1)->addDays(fake()->numberBetween(1, 28));
                 
-                $status = fake()->randomElement([
-                    'succeeded' => 85,
-                    'pending' => 10,
-                    'failed' => 5,
-                ]);
+                $status = fake()->randomElement(['succeeded', 'pending', 'failed', 'processing']);
 
-                $method = fake()->randomElement([
-                    'ach' => 60,
-                    'card' => 25,
-                    'check' => 10,
-                    'cash' => 5,
-                ]);
+                $method = fake()->randomElement(['ach', 'card', 'check', 'cash', 'other']);
 
                 $baseAmount = $lease->rent_amount_cents;
                 $variance = fake()->numberBetween(-5000, 5000);

@@ -7,6 +7,7 @@ use App\Models\Property;
 use App\Models\Unit;
 use App\Models\MaintenanceTicket;
 use App\Models\Contact;
+use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 
 class MaintenanceSeeder extends Seeder
@@ -31,6 +32,7 @@ class MaintenanceSeeder extends Seeder
             ['title' => 'Light fixture flickering', 'description' => 'Kitchen light fixture flickers randomly, electrical issue suspected.', 'priority' => 'medium'],
         ];
 
+        // Create vendor contacts and vendor records
         $vendors = [];
         for ($i = 1; $i <= 5; $i++) {
             $contact = Contact::create([

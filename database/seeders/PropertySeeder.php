@@ -62,15 +62,17 @@ class PropertySeeder extends Seeder
                 array_merge($propertyData, ['organization_id' => $org->id])
             );
 
-            foreach ($units as $index => $unitLabel) {
-                $unit = Unit::firstOrCreate([
+            foreach ($units as $unitLabel) {
+                // Create unit with simple approach
+                $unit = Unit::create([
                     'organization_id' => $org->id,
                     'property_id' => $property->id,
                     'label' => $unitLabel,
                     'status' => fake()->randomElement(['available', 'occupied', 'maintenance']),
-                    'bedrooms' => $property->type === 'residential' ? fake()->numberBetween(1, 3) : null,
-                    'bathrooms' => $property->type === 'residential' ? fake()->numberBetween(1, 2) : null,
-                    'square_feet' => fake()->numberBetween(600, 1500),
+                    'beds' => $property->type === 'residential' ? fake()->numberBetween(1, 3) : null,
+                    'baths' => $property->type === 'residential' ? fake()->numberBetween(1, 2) : null,
+                    'sqft' => fake()->numberBetween(600, 1500),
+                    'rent_amount_cents' => fake()->numberBetween(100000, 300000),
                 ]);
 
                 if ($unit->status === 'occupied') {
@@ -88,7 +90,7 @@ class PropertySeeder extends Seeder
                         'primary_contact_id' => $tenant->id,
                         'start_date' => Carbon::now()->subMonths(fake()->numberBetween(1, 12)),
                         'end_date' => Carbon::now()->addMonths(fake()->numberBetween(6, 24)),
-                        'rent_amount_cents' => fake()->numberBetween(100000, 300000),
+                        'rent_amount_cents' => $unit->rent_amount_cents,
                         'deposit_amount_cents' => fake()->numberBetween(100000, 200000),
                         'status' => 'active',
                     ]);
